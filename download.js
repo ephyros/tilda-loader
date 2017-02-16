@@ -1,17 +1,15 @@
-require('dotenv').config();
-
 const request = require('request');
 const fs = require('fs');
 const { Observable } = require('rx');
 
-Observable
+const download = ({ publickey, secretkey, pageid, dest }) => Observable
   .fromNodeCallback(request, undefined, (r, body) => body)({
     method: 'GET',
     url: 'http://api.tildacdn.info/v1/getpagefullexport/',
     qs: {
-      publickey: process.env.PUBLIC_KEY,
-      secretkey: process.env.PRIVATE_KEY,
-      pageid: process.env.PAGE_ID
+      publickey,
+      secretkey,
+      pageid,
     },
     json: true
   })
@@ -22,22 +20,22 @@ Observable
         JSON.stringify(body, null, 2)
       );
     }
-
     return body.result;
   })
   .flatMap(body => Observable
-    .fromNodeCallback(fs.writeFile, fs)(`${process.env.DEST_DIR}/index.html`, body.html)
+    .fromNodeCallback(fs.writeFile, fs)(`${dest}/index.html`, body.html)
     .map(body))
-  .do(() => console.log(`${process.env.DEST_DIR}/index.html <- @`))
+  .do(() => console.log(`${dest}/index.html <- @`))
   .flatMap(body => [].concat(
     body.images,
     body.css,
     body.js
   ))
-  .do(({ from, to }) => console.log(`${process.env.DEST_DIR}/${to} <- ${from}`))
+  .do(({ from, to }) => console.log(`${dest}/${to} <- ${from}`))
   .flatMap(({ from, to }) => Observable.create(observer => {
     const saver = request(from);
     saver.on('end', () => observer.onCompleted());
-    saver.pipe(fs.createWriteStream(`${process.env.DEST_DIR}/${to}`));
-  }))
-  .subscribe();
+    saver.pipe(fs.createWriteStream(`${dest}/${to}`));
+  }));
+
+module.exports = download;

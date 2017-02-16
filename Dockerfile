@@ -13,6 +13,7 @@ RUN npm set progress=false && \
 
 RUN yarn
 
-VOLUME /app/page
+VOLUME /app/public
 
-CMD node main.js
+EXPOSE 8080
+CMD node server.js
